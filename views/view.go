@@ -7,18 +7,14 @@ import (
 )
 
 var (
-	LayoutDir   string = "/Users/sshivram/go-workspace/src/wwgo/views/layouts/"
-	TemplateExt string = ".gohtml"
+	ViewsDir  string = "/Users/sshivram/go-workspace/src/wwgo/views"
+	LayoutDir string = ViewsDir + "/layouts"
+	ViewsExt  string = ".gohtml"
 )
 
-func layoutFiles() []string {
-	files, err := filepath.Glob(LayoutDir + "*" + TemplateExt)
-	if err != nil {
-		panic(err)
-	}
-	return files
-}
 func NewView(layout string, files ...string) *View {
+	files = addViewsDirPrefix(files)
+	files = addViewsExtSuffix(files)
 	files = append(files, layoutFiles()...)
 	t, err := template.ParseFiles(files...)
 	if err != nil {
@@ -36,5 +32,36 @@ type View struct {
 }
 
 func (v *View) Render(w http.ResponseWriter, data interface{}) error {
+	w.Header().Set("Content-Type", "text/html")
 	return v.Template.ExecuteTemplate(w, v.Layout, data)
+}
+
+func (v *View) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := v.Render(w, nil); err != nil {
+		panic(err)
+	}
+}
+
+func addViewsDirPrefix(files []string) []string {
+	ret := make([]string, len(files))
+	for i, f := range files {
+		ret[i] = ViewsDir + "/" + f
+	}
+	return ret
+}
+
+func addViewsExtSuffix(files []string) []string {
+	ret := make([]string, len(files))
+	for i, f := range files {
+		ret[i] = f + ViewsExt
+	}
+	return ret
+}
+
+func layoutFiles() []string {
+	files, err := filepath.Glob(LayoutDir + "/*" + ViewsExt)
+	if err != nil {
+		panic(err)
+	}
+	return files
 }
